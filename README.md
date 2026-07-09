@@ -48,12 +48,12 @@ config.txt + peticions.txt + internacional.ESP/ENG
 ```
 Proyecto_Final_Agenda/
 ├── src/
-│   ├── Configuracion.java       → guarda año, mes e idiomas
-│   ├── GestionDatosTiempo.java  → lectura de config, diccionario y fechas
+│   ├── Configuracion.java       → (Jose) guarda año, mes e idiomas
+│   ├── GestionDatosTiempo.java  → (Jose) lectura de config, diccionario y fechas
 │   ├── Peticion.java            → (Robert) modelo de una petición
 │   ├── ProcesadorAgenda.java    → (Robert) motor de la matriz y conflictos
 │   ├── GeneradorHTML.java       → (Simon) generación de los .html
-│   └── Main.java                → coordina todo el flujo
+│   └── Main.java                → (Equipo) coordina todo el flujo
 │
 ├── config.txt                   → año/mes a procesar + idiomas
 ├── peticions.txt                → peticiones de reserva
