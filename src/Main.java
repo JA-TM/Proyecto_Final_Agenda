@@ -1,34 +1,24 @@
+import java.util.HashMap;
+
 public class Main {
-
     public static void main(String[] args) {
-        System.out.println("===== INICIO g_agenda ====");
-
-        // *** Paso 01: Leer configuración (José Antonio) ***
+        
+        // 1. CONEXIÓN ANTONIO: Leer configuración del archivo físico
         Configuracion config = GestionDatosTiempo.leerConfig("config.txt");
-        if (config == null) {
-            System.out.println("ERROR: no se pudo leer config.txt. Se detiene el programa.");
-            return;
-        } 
-        System.out.println("Procesando: " + config.getMes() + "/" + config.getAnio());
-        System.out.println("Idioma entrada: " + config.getIdiomaEntrada()
-                        + " | Idioma salida: " + config.getIdiomaSalida());
+        if (config == null) return; 
 
-        // *** Paso 02: Cargar diccionario de idioma (José Antonio) ***
-        GestionDatosTiempo gestor = new GestionDatosTiempo();
-        gestor.cargarDiccionario(config.getIdiomaEntrada()); // ESP (para leer la entrada)
-        gestor.cargarDiccionario(config.getIdiomaSalida());  // ENG (para escribir la salida)
-        System.out.println("Diccionarios cargados. Titulo de salida: " + gestor.getTraduccion("001"));
+        // Cargar el diccionario de salida según el config (ej: ENG)
+        GestionDatosTiempo gestorTiempo = new GestionDatosTiempo();
+        gestorTiempo.cargarDiccionario(config.getIdiomaSalida());
 
-        // *** Paso 03: Leer y procesar peticiones (Robert)***
-        // ProcesadorAgenda procesador = new ProcesadorAgenda();
-        // procesador.leerPeticiones("peticiones.txt");
-        // procesador.ordenarYProcesar(config, gestor);
-        System.out.println("[PASO 3 pendiente: motor de Robert]");
+        // 2. CONEXIÓN ROBERT: Llamada al método que procesa las agendas
+        // (Hoy lee nuestra simulación limpia, el lunes leerá el motor real de Robert)
+        HashMap<String, String[][]> mapasSalasReales = ProcesadorAgenda.procesarAgenda(config);
 
-        // *** Paso 04: Generar los HTML de cada sala (Simon)***
-        // GeneradorHTML.generarTodasLasSalas(procesador.getMatrices(), config, gestor);
-        System.out.println("[PASO 4 pendiente: HTML de Simon]");
-
-        System.out.println("==== Fin g_agenda ====");
+        // 3. CONEXIÓN SIMON (Tú): Tu motor dinámico genera los HTML de todas las salas
+        for (String nombreSala : mapasSalasReales.keySet()) {
+            String[][] matrizMesSala = mapasSalasReales.get(nombreSala);
+            GeneradorHTML.generarArchivoSala(nombreSala, matrizMesSala, config, gestorTiempo);
+        }
     }
 }
