@@ -1,0 +1,35 @@
+===================================================================
+                  MANUAL DE USUARIO - PROYECTO G_AGENDA
+                            GRUPO ROSIJO
+===================================================================
+
+Este programa genera calendarios semanales automáticos en formato HTML
+a partir de un archivo de peticiones.
+
+-------------------------------------------------------------------
+¿CÓMO CAMBIAR EL IDIOMA O EL MES DE LA WEB?
+-------------------------------------------------------------------
+No necesitas modificar el código Java. Todo se controla desde el 
+archivo "config.txt" ubicado en la carpeta principal del proyecto.
+
+Abre "config.txt" con cualquier bloc de notas. Verás dos líneas:
+
+Línea 1: [AÑO] [MES]       --> Ej: 2025 11 (Para Noviembre de 2025)
+Línea 2: [ENTRADA] [SALIDA] --> Ej: CAT ENG (Entrada catalán, Web en inglés)
+
+-------------------------------------------------------------------
+IDIOMAS DISPONIBLES (Para la salida):
+-------------------------------------------------------------------
+- ESP : Genera la agenda en Español (Usa internacional.ESP)
+- ENG : Genera la agenda en Inglés  (Usa internacional.ENG)
+- CAT : Genera la agenda en Catalán (Usa internacional.CAT)
+
+-------------------------------------------------------------------
+¿CÓMO EJECUTAR EL PROGRAMA?
+-------------------------------------------------------------------
+1. Modifica tus archivos "config.txt" y "peticions.txt".
+2. Abre el proyecto en tu entorno de desarrollo (VS Code).
+3. Selecciona el archivo "Main.java" y dale al botón de Play (Run).
+4. El programa procesará todo en silencio. Al acabar, aparecerán
+   los archivos de las salas (Sala1.html, Sala2.html) en la raíz.
+===================================================================
