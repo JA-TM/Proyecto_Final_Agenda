@@ -68,12 +68,14 @@ public class GestionDatosTiempo {
     }
 
     // *** D2) Mapeo de letras de dia (para Robert) ***
-    public static String getLetraDia(int numeroDia) {
-        String letras = "LMXJVSD";   // L=0, M=1, X=2, J=3, V=4, S=5, D=6
+    // Las letras se leen del diccionario (codigo 003), no van fijas en el codigo.
+    // Ojo: ya NO son static, porque necesitan el diccionario del gestor.
+    public String getLetraDia(int numeroDia) {
+        String letras = getTraduccion("003");   // ESP -> "LMXJVSD" | CAT -> "LMCJVSG"
         return String.valueOf(letras.charAt(numeroDia - 1));
     }
 
-    public static boolean diaEstaEnMascara(String mascara, int numeroDia) {
+    public boolean diaEstaEnMascara(String mascara, int numeroDia) {
         String letra = getLetraDia(numeroDia);
         return mascara.contains(letra);
     }
@@ -106,10 +108,12 @@ public class GestionDatosTiempo {
         System.out.println("Fila del dia 30: " + getFilaSemanaMes(anio, mes, 30));
 
         System.out.println("\n--- Prueba de mascara de dias ---");
-        System.out.println("Letra del dia 3 (miercoles): " + getLetraDia(3));
-        System.out.println("Letra del dia 1 (lunes): " + getLetraDia(1));
-        System.out.println("Mascara LXV incluye miercoles (3)? " + diaEstaEnMascara("LXV", 3));
-        System.out.println("Mascara LXV incluye martes (2)? " + diaEstaEnMascara("LXV", 2));
-        System.out.println("Mascara LMXJVSD incluye domingo (7)? " + diaEstaEnMascara("LMXJVSD", 7));
+        gestor.cargarDiccionario(config.getIdiomaEntrada());   // ESP: recargamos el idioma de ENTRADA
+        System.out.println("Letras del diccionario (003): " + gestor.getTraduccion("003"));
+        System.out.println("Letra del dia 3 (miercoles): " + gestor.getLetraDia(3));
+        System.out.println("Letra del dia 1 (lunes): " + gestor.getLetraDia(1));
+        System.out.println("Mascara LXV incluye miercoles (3)? " + gestor.diaEstaEnMascara("LXV", 3));
+        System.out.println("Mascara LXV incluye martes (2)? " + gestor.diaEstaEnMascara("LXV", 2));
+        System.out.println("Mascara LMXJVSD incluye domingo (7)? " + gestor.diaEstaEnMascara("LMXJVSD", 7));
     }
 }
