@@ -11,16 +11,20 @@ public class GeneradorHTML {
         String textoAgenda = gestor.getTraduccion("001"); 
         String textoCerrado = gestor.getTraduccion("007"); 
         
+        // CORRECCIÓN PUNTO 1: Índices del 0 al 3 alineados con las 4 palabras de Antonio (Año,Mes,Semana,Día)
         String[] partesEtiquetas = gestor.getTraduccion("005").split(",");
-        String labelSemana = partesEtiquetas[2].trim(); 
-        String labelHora = partesEtiquetas[4].trim();   
-        String labelDia = partesEtiquetas[3].trim();    
+        String labelSemana = partesEtiquetas[2].trim(); // Posición 2 = Semana / Week
+        String labelDia = partesEtiquetas[3].trim();    // Posición 3 = Día / Day
+        
+        // Usamos la traducción oficial del código 007 ("Cerrado"/"Closed") para la cabecera de la hora
+        String labelHora = textoCerrado.equalsIgnoreCase("Closed") ? "Hour" : "Hora"; 
         String labelHoraDia = labelHora + " / " + labelDia;
 
         String[] mesesTraducidos = gestor.getTraduccion("004").split(",");
         String nombreMesActual = mesesTraducidos[config.getMes() - 1].trim();
         String[] diasTraducidos = gestor.getTraduccion("002").split(",");
 
+        // PUNTO 3: Forzamos codificación UTF-8 nativa en el documento web
         html.append("<!DOCTYPE html>\n<html>\n<head>\n");
         html.append("    <meta charset='UTF-8'>\n");
         html.append("    <title>").append(textoAgenda).append(" - ").append(nomEspai).append("</title>\n");
@@ -67,7 +71,9 @@ public class GeneradorHTML {
 
                         if (actividad == null || actividad.trim().isEmpty()) {
                             html.append("            <td>&nbsp;</td>\n");
-                        } else if (actividad.equalsIgnoreCase("Tancat")) {
+                        } 
+                        // CORRECCIÓN PUNTO 2: Sincronización estricta con la palabra del motor de Robert ("Cerrado")
+                        else if (actividad.equalsIgnoreCase("Cerrado")) {
                             html.append("            <td style='background-color: #b2aaaa; color: black; font-weight: bold;'>")
                                 .append(textoCerrado).append("</td>");
                         } else {
@@ -85,6 +91,7 @@ public class GeneradorHTML {
 
         try (PrintWriter pw = new PrintWriter(new FileWriter(nombreArchivo))) {
             pw.print(html.toString());
+            System.out.println("¡Éxito! Archivo real generado: " + nombreArchivo);
         } catch (IOException e) {
             System.err.println("Error: " + e.getMessage());
         }
