@@ -3,8 +3,12 @@ import java.util.HashMap;
 import java.util.LinkedHashMap;
 import java.io.File;
 import java.io.FileNotFoundException;
+import java.io.PrintWriter;
 import java.util.Scanner;
 import java.time.LocalDate;
+import java.io.FileWriter;
+import java.io.IOException;
+
 
 
 
@@ -12,6 +16,10 @@ public class ProcesadorAgenda {
 
     private ArrayList<Peticion> peticiones = new ArrayList<Peticion>(); // declararion de la lista
     private ArrayList<String> incidencias = new ArrayList<String>(); // declararion de la lista de incidencias
+    private HashMap<String, Integer> horasAsignadas = new HashMap<>();
+    private HashMap<String, Integer> horasNoAsignadas = new HashMap<>();
+   
+   
     // declarar el método leerPeticiones que recibe la ruta del fichero como parámetro y lanza una excepción de tipo FileNotFoundException
     public void leerPeticiones(String rutaFichero) throws FileNotFoundException { 
         File fichero = new File(rutaFichero); // crear un objeto File con la ruta del fichero
@@ -59,7 +67,7 @@ public class ProcesadorAgenda {
 
     }
     //método para ordenar las peticiones, primero las que tienen actividad "Tancat" y luego el resto
-    public ArrayList<Peticion> ordernarTancatPrimero(ArrayList<Peticion> lista){
+    public ArrayList<Peticion> ordenarTancatPrimero(ArrayList<Peticion> lista){
         ArrayList<Peticion> tancats = new ArrayList<Peticion>();
         ArrayList<Peticion> resto = new ArrayList<Peticion>();
 
@@ -92,7 +100,7 @@ public class ProcesadorAgenda {
         }
         return true;
     }
-
+    //método para validar la máscara de horas de la petición
     public boolean mascaraHorasValidas(String mascaraHoras){
         String[] rangos = mascaraHoras.split("_");
         for(String rango: rangos){
@@ -102,7 +110,7 @@ public class ProcesadorAgenda {
         }
         return true;
     }
-
+    //método para agrupar las peticiones por actividad
     public ArrayList<Peticion> agruparPorActividad(ArrayList<Peticion> lista) {
         LinkedHashMap<String, ArrayList<Peticion>> grupos = new LinkedHashMap<>();
 
@@ -127,6 +135,19 @@ public class ProcesadorAgenda {
     // getter para obtener la lista de peticiones
     public ArrayList<Peticion> getPeticiones() {
            return peticiones;
+    }
+    // getter para obtener la lista de incidencias
+    
+    public ArrayList<String> getIncidencias() {
+        return incidencias;
+    }
+     // getter para obtener la lista de horas asignadas
+    public HashMap<String, Integer> getHorasAsignadas() {
+        return horasAsignadas;
+    }
+    // getter para obtener la lista de horas no asignadas
+     public HashMap<String, Integer> getHorasNoAsignadas() {
+        return horasNoAsignadas;
     }
 
     // método para crear matrices por sala
@@ -182,7 +203,7 @@ public class ProcesadorAgenda {
     }
     // método para rellenar la matriz de una sala con las peticiones válidas
     public void rellenarMatriz(String[][] matriz, ArrayList<Peticion> peticionesDeSala,
-        int anio, int mes, GestionDatosTiempo gestor){
+        int anio, int mes, GestionDatosTiempo gestor, String nombreSala) {
             for(Peticion p : peticionesDeSala){
                 ArrayList<Integer> dias = diasDelMesParaPeticion(p, anio, mes, gestor);
                 ArrayList<Integer> horas = horasDeMascara(p.getMascaraHoras());
@@ -191,14 +212,34 @@ public class ProcesadorAgenda {
                     for (int hora : horas){
                         if (matriz[hora][dia] == null) {
                             matriz[hora][dia] = p.getActividad();
+                        
+                        String actividad = p.getActividad();
+                        if(!horasAsignadas.containsKey(actividad)){
+                            horasAsignadas.put(actividad, 0);
+                        }
+                        int valorActual = horasAsignadas.get(actividad);
+                        horasAsignadas.put(actividad, valorActual + 1);
+
                         }else{
-                            matriz[hora][dia] += ", " + p.getActividad();
+                            
+                        String mensaje = "Conflicto: " + p.getActividad() + " no pudo entrar en " + nombreSala + " dia " + dia + " hora " + hora + " (ocupado por " + matriz[hora][dia] + ")";
+                        incidencias.add(mensaje);
+
+                    
+                        String actividadPerdedora = p.getActividad();
+                        if (!horasNoAsignadas.containsKey(actividadPerdedora)) {
+                        horasNoAsignadas.put(actividadPerdedora, 0);
+                        }
+                        int valorActualNo = horasNoAsignadas.get(actividadPerdedora);
+                        horasNoAsignadas.put(actividadPerdedora, valorActualNo + 1);
+                    
+                         
                         }
 
                     }
                 }
             }
-        }
+    }    
     // método para filtrar las peticiones por sala
     public ArrayList<Peticion> filtrarPorSala(ArrayList<Peticion> lista, String sala){
         ArrayList<Peticion>  resultado = new ArrayList<Peticion>();
@@ -210,6 +251,15 @@ public class ProcesadorAgenda {
 
         return resultado;
     }
+    // método para escribir las incidencias en un fichero
+    public void escribirIncidencias(String rutaFichero) throws IOException{
+        FileWriter fw = new FileWriter(rutaFichero);
+        PrintWriter pw = new PrintWriter(fw);
+        for(String incidencia : incidencias){
+            pw.println(incidencia);
+        }
+        pw.close();
+    }
 
      // método main para probar la clase ProcesadorAgendas
     public static void main(String[] args) {
@@ -219,36 +269,12 @@ public class ProcesadorAgenda {
         } catch (FileNotFoundException e) {
             System.out.println("No se encontró el fichero: " + e.getMessage());
         }
-
-        System.out.println("Total peticiones leidas: " + procesador.getPeticiones().size());
-
         ArrayList<Peticion> validas = procesador.validarPeticiones();
-        System.out.println("Total validas: " + validas.size());
-
-        ArrayList<Peticion> ordenadas = procesador.ordernarTancatPrimero(validas);
+        ArrayList<Peticion> ordenadas = procesador.ordenarTancatPrimero(validas);
         ArrayList<Peticion> agrupadas = procesador.agruparPorActividad(ordenadas);
-        for (Peticion p : agrupadas) {
-            System.out.println(p.getActividad() + " - " + p.getEspacio());
-        }
-
+        
         GestionDatosTiempo gestor = new GestionDatosTiempo();
         gestor.cargarDiccionario("CAT");
-
-        Peticion peticionPrueba = agrupadas.get(5);
-        ArrayList<Integer> resultado = procesador.diasDelMesParaPeticion(peticionPrueba, 2025, 11, gestor);
-        System.out.println("Actividad de prueba: " + peticionPrueba.getActividad());
-        System.out.println("Dias validos: " + resultado);
-
-       /*  HashMap<String, String[][]> matrices = procesador.crearMatricesPorSala(agrupadas);
-
-            System.out.println("Total de salas: " + matrices.size());
-
-            for (String sala : matrices.keySet()) {
-                System.out.println("Sala encontrada: " + sala);
-            
-        }*/
-
-        System.out.println(procesador.horasDeMascara("13-14_17-18"));
 
         ArrayList<Peticion> peticionesSala1 = procesador.filtrarPorSala(agrupadas, "Sala1");
         ArrayList<Peticion> peticionesSala2 = procesador.filtrarPorSala(agrupadas, "Sala2");
@@ -257,11 +283,28 @@ public class ProcesadorAgenda {
         String[][] matrizSala1 = matrices.get("Sala1");
         String[][] matrizSala2 = matrices.get("Sala2");
         
-        procesador.rellenarMatriz(matrizSala1, peticionesSala1, 2025, 11, gestor);
-        procesador.rellenarMatriz(matrizSala2, peticionesSala2, 2025, 11, gestor);
+        procesador.rellenarMatriz(matrizSala1, peticionesSala1, 2025, 11, gestor, "Sala1");
+        procesador.rellenarMatriz(matrizSala2, peticionesSala2, 2025, 11, gestor, "Sala2");
 
-        System.out.println("Sala1, dia 3, hora 13: " + matrizSala1[13][3]);
-        System.out.println("Sala2, dia 3, hora 13: " + matrizSala2[13][3]);
+        
+
+        try{
+            procesador.escribirIncidencias("incidencias.log");
+        } catch (IOException e) {
+            System.out.println("Error al escribir incidencias: " + e.getMessage());
+        }
+
+        System.out.println("\n--- Horas asignadas por actividad ---");
+        for (String actividad : procesador.getHorasAsignadas().keySet()) {
+        System.out.println(actividad + ": " + procesador.getHorasAsignadas().get(actividad));
+    
+        }
+
+        System.out.println("\n--- Horas NO asignadas por actividad ---");
+        for (String actividad : procesador.getHorasNoAsignadas().keySet()) {
+        System.out.println(actividad + ": " + procesador.getHorasNoAsignadas().get(actividad));
+        }
+
     }
 
 }
