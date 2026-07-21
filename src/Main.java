@@ -1,111 +1,43 @@
-import java.io.BufferedReader;
-import java.io.BufferedWriter;
-import java.io.FileReader;
-import java.io.FileWriter;
-import java.io.IOException;
-import java.util.ArrayList;
-import java.util.List;
-
 public class Main {
     public static void main(String[] args) {
-        String archivoConfig = "config.txt";
-        String archivoPeticions = "peticions.txt";
-        String archivoLog = "incidencies.log";
+        // 1. Leer configuracion (modulo Jose Antonio)
+        Configuracion config = GestionDatosTiempo.leerConfig("config.txt");
+        if (config == null) return;
+        int anio = config.getAnio();
+        int mes = config.getMes();
 
-        String anyMes = "";
-        String idiomas = "";
-        String idiomaSortida = "ESP"; 
+        // 2. Gestor con diccionario de ENTRADA (para leer mascaras y "Cerrado")
+        GestionDatosTiempo gestorEntrada = new GestionDatosTiempo();
+        gestorEntrada.cargarDiccionario(config.getIdiomaEntrada()); // ESP
 
-        List<String> peticionesCerrado = new ArrayList<>();
-        List<String> peticionesEstandar = new ArrayList<>();
-
-        
-        try (BufferedReader br = new BufferedReader(new FileReader(archivoConfig))) {
-            anyMes = br.readLine(); 
-            idiomas = br.readLine(); 
-            if (idiomas != null && idiomas.split(" ").length == 2) {
-                idiomaSortida = idiomas.split(" ")[1]; 
-            }
-        } catch (IOException e) {
-            
-        }
-
-        
-        try (BufferedReader br = new BufferedReader(new FileReader(archivoPeticions))) {
-            String linea;
-            while ((linea = br.readLine()) != null) {
-                linea = linea.trim();
-                if (linea.isEmpty()) continue;
-                
-                
-                if (linea.toLowerCase().startsWith("cerrado") || linea.toLowerCase().startsWith("tancat")) {
-                    peticionesCerrado.add(linea);
-                } else {
-                    peticionesEstandar.add(linea);
-                }
-            }
-        } catch (IOException e) {
-            
-        }
-
-       
-        int totalSemanas = 6; 
-        String[][][] matrizSala1 = new String[totalSemanas][7][24];
-        String[][][] matrizSala2 = new String[totalSemanas][7][24];
-
-        
-        try (BufferedWriter logWriter = new BufferedWriter(new FileWriter(archivoLog))) {
-            logWriter.write("#Resumen Actividades " + (anyMes != null ? anyMes.replace(" ", "/") : "") + "\n");
-
-            
-            for (String peticion : peticionesCerrado) {
-                inyectarEnMatriz(peticion, matrizSala1, matrizSala2, logWriter);
-            }
-
-            
-            for (String peticion : peticionesEstandar) {
-                inyectarEnMatriz(peticion, matrizSala1, matrizSala2, logWriter);
-            }
-            
-        } catch (IOException e) {
-           
-        }
-
-        
-        GeneradorHTML.generarArchivoHTML("Sala1", matrizSala1, totalSemanas, idiomaSortida);
-        GeneradorHTML.generarArchivoHTML("Sala2", matrizSala2, totalSemanas, idiomaSortida);
-    }
-
-    private static void inyectarEnMatriz(String linea, String[][][] s1, String[][][] s2, BufferedWriter log) throws IOException {
-        String[] partes = linea.split(" ");
-        if (partes.length < 6) return;
-
-        String actividad = partes[0];
-        String sala = partes[1];
-        String horasMascara = partes[5]; 
+        // 3. Motor de Robert: leer, validar, ordenar, agrupar
+        ProcesadorAgenda procesador = new ProcesadorAgenda();
         try {
-            String[] rangos = horasMascara.split("_");
-            String[][][] matrizObjetivo = sala.equalsIgnoreCase("Sala1") ? s1 : s2;
+            procesador.leerPeticiones("peticions.txt");
+        } catch (java.io.FileNotFoundException e) {
+            return;
+        }
+        java.util.ArrayList<Peticion> validas = procesador.validarPeticiones();
+        java.util.ArrayList<Peticion> ordenadas = procesador.ordenarTancatPrimero(validas);
+        java.util.ArrayList<Peticion> agrupadas = procesador.agruparPorActividad(ordenadas);
 
-            for (String rango : rangos) {
-                String[] h = rango.split("-");
-                int inicio = Integer.parseInt(h[0]);
-                int fin = Integer.parseInt(h[1]);
+        // 4. Crear y rellenar la matriz de cada sala
+        java.util.HashMap<String, String[][]> matrices = procesador.crearMatricesPorSala(agrupadas);
+        for (String sala : matrices.keySet()) {
+            java.util.ArrayList<Peticion> peticionesSala = procesador.filtrarPorSala(agrupadas, sala);
+            procesador.rellenarMatriz(matrices.get(sala), peticionesSala, anio, mes, gestorEntrada, sala);
+        }
 
-                for (int sem = 0; sem < 6; sem++) {
-                    for (int dia = 0; dia < 7; dia++) {
-                        for (int hora = inicio; hora < fin; hora++) {
-                            if (matrizObjetivo[sem][dia][hora] == null) {
-                                matrizObjetivo[sem][dia][hora] = actividad;
-                            } else if (!matrizObjetivo[sem][dia][hora].equalsIgnoreCase(actividad)) {
-                                log.write("Conflicto: " + actividad + " no pudo entrar en " + sala + " (Ocupado por " + matrizObjetivo[sem][dia][hora] + ")\n");
-                            }
-                        }
-                    }
-                }
-            }
-        } catch (Exception e) {
-            
+        // 5. Escribir incidencias
+        try {
+            procesador.escribirIncidencias("incidencias.log");
+        } catch (java.io.IOException e) { }
+
+        // 6. Generar HTML de cada sala (modulo Simon), con diccionario de SALIDA
+        GestionDatosTiempo gestorSalida = new GestionDatosTiempo();
+        gestorSalida.cargarDiccionario(config.getIdiomaSalida()); // ENG
+        for (String sala : matrices.keySet()) {
+            GeneradorHTML.generarArchivoSala(sala, matrices.get(sala), config, gestorSalida);
         }
     }
 }
