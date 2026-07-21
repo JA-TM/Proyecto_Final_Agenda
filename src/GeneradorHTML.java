@@ -1,74 +1,79 @@
-import java.io.BufferedWriter;
 import java.io.FileWriter;
 import java.io.IOException;
+import java.io.PrintWriter;
 
 public class GeneradorHTML {
 
-    public static void generarArchivoHTML(String nomEspai, String[][][] matrizSala, int totalSemanas, String idiomaSortida) {
+    public static void generarArchivoSala(String nomEspai, String[][] matrizMes, Configuracion config, GestionDatosTiempo gestor) {
         String nombreArchivo = nomEspai + ".html";
-        boolean esIngles = idiomaSortida.equalsIgnoreCase("ENG");
-        
-        
-        String textoBloqueo = esIngles ? "Closed" : "Cerrado";
-        String tituloSemana = esIngles ? "Week " : "Semana ";
+        StringBuilder html = new StringBuilder();
 
-        try (BufferedWriter bw = new BufferedWriter(new FileWriter(nombreArchivo))) {
-            bw.write("<html>\n<head>\n<title>" + nomEspai + "</title>\n");
-            bw.write("<style>\n");
-            bw.write("  table { border-collapse: collapse; width: 100%; margin-bottom: 30px; font-family: sans-serif; }\n");
-            bw.write("  th, td { border: 1px solid #ccc; padding: 6px; text-align: center; height: 25px; }\n");
-            bw.write("  th { background-color: #f2f2f2; }\n");
-            bw.write("</style>\n</head>\n<body>\n");
-            bw.write("<h1>" + nomEspai.toUpperCase() + "</h1>\n");
+        String textoAgenda = gestor.getTraduccion("001");
+        String textoCerrado = gestor.getTraduccion("007");
+        String[] etiquetas = gestor.getTraduccion("005").split(",");
+        String labelSemana = etiquetas[2].trim();
+        String[] meses = gestor.getTraduccion("004").split(",");
+        String nombreMes = meses[config.getMes() - 1].trim();
+        String[] dias = gestor.getTraduccion("002").split(",");
 
-            
-            for (int s = 0; s < totalSemanas; s++) {
-                bw.write("<h2>" + tituloSemana + (s + 1) + "</h2>\n");
-                bw.write("<table>\n");
-                
-                
-                bw.write("  <tr>\n    <th>" + (esIngles ? "Hour / Day" : "Hora / Dia") + "</th>\n");
-                String[] dias = esIngles ? 
-                    new String[]{"Monday", "Tuesday", "Wednesday", "Thursday", "Friday", "Saturday", "Sunday"} :
-                    new String[]{"Lunes", "Martes", "Miercoles", "Jueves", "Viernes", "Sabado", "Domingo"};
-                
-                for (String dia : dias) {
-                    bw.write("    <th>" + dia + "</th>\n");
-                }
-                bw.write("  </tr>\n");
+        html.append("<!DOCTYPE html>\n<html>\n<head>\n");
+        html.append("    <meta charset='UTF-8'>\n");
+        html.append("    <title>").append(textoAgenda).append(" - ").append(nomEspai).append("</title>\n");
+        html.append("</head>\n<body style='font-family: Arial, sans-serif; padding: 20px;'>\n");
+        html.append("    <h1>").append(textoAgenda).append(": ").append(nomEspai).append("</h1>\n");
+        html.append("    <h2>").append(nombreMes).append(" ").append(config.getAnio()).append("</h2>\n");
+        html.append("    <hr>\n");
 
-                
-                for (int h = 0; h < 24; h++) {
-                    String horaInicio = String.format("%02d", h);
-                    String horaFin = String.format("%02d", h + 1);
-                    bw.write("  <tr>\n    <td>" + horaInicio + "-" + horaFin + "</td>\n");
+        int diasTotales = GestionDatosTiempo.getDiasDelMes(config.getAnio(), config.getMes());
+        int totalSemanas = GestionDatosTiempo.getFilaSemanaMes(config.getAnio(), config.getMes(), diasTotales) + 1;
 
-                    
-                    for (int d = 0; d < 7; d++) {
-                        String actividad = matrizSala[s][d][h];
+        for (int s = 0; s < totalSemanas; s++) {
+            html.append("    <h3>").append(labelSemana).append(" ").append(s + 1).append("</h3>\n");
+            html.append("    <table border='1' style='border-collapse: collapse; text-align: center; width: 100%; margin-bottom: 30px;'>\n");
+            html.append("        <tr style='background-color: #f2f2f2; font-weight: bold;'>\n");
+            html.append("            <th style='width: 12%;'>").append(labelSemana).append(" / ").append(etiquetas[3].trim()).append("</th>\n");
+            for (int d = 0; d < dias.length; d++) {
+                html.append("            <th style='width: 12%;'>").append(dias[d].trim()).append("</th>\n");
+            }
+            html.append("        </tr>\n");
 
-                        
-                        if (actividad != null && (actividad.equalsIgnoreCase("Tancat") || actividad.equalsIgnoreCase("Cerrado") || actividad.equalsIgnoreCase("Closed"))) {
-                            bw.write("    <td style='background-color: #808080; color: #ffffff; font-weight: bold;'>" + textoBloqueo + "</td>\n");
-                        } 
-                        
-                        else if (actividad != null && !actividad.isEmpty()) {
-                            bw.write("    <td>" + actividad + "</td>\n");
-                        } 
-                       
-                        else {
-                            bw.write("    <td></td>\n");
+            for (int hora = 0; hora < 24; hora++) {
+                html.append("        <tr>\n");
+                String rango = String.format("%02d-%02d", hora, hora + 1);
+                html.append("            <td style='font-weight: bold; background-color: #fafafa;'>").append(rango).append("</td>\n");
+
+                for (int col = 1; col <= 7; col++) {
+                    int diaReal = 0;
+                    for (int d = 1; d <= diasTotales; d++) {
+                        int fila = GestionDatosTiempo.getFilaSemanaMes(config.getAnio(), config.getMes(), d);
+                        int columna = GestionDatosTiempo.getDiaDeLaSemana(config.getAnio(), config.getMes(), d);
+                        if (fila == s && columna == col) { diaReal = d; break; }
+                    }
+
+                    if (diaReal == 0) {
+                        html.append("            <td style='background-color: #fdfdfd;'>&nbsp;</td>\n");
+                    } else {
+                        String actividad = matrizMes[hora][diaReal];
+                        if (actividad == null || actividad.trim().isEmpty()) {
+                            html.append("            <td>&nbsp;</td>\n");
+                        } else if (actividad.equalsIgnoreCase("Cerrado") || actividad.equalsIgnoreCase("Tancat") || actividad.equalsIgnoreCase("Closed")) {
+                            html.append("            <td style='background-color: #b2aaaa; color: black; font-weight: bold;'>").append(textoCerrado).append("</td>\n");
+                        } else {
+                            html.append("            <td style='background-color: #e6f7ff; color: #0050b3;'>").append(actividad.trim()).append("</td>\n");
                         }
                     }
-                    bw.write("  </tr>\n");
                 }
-                bw.write("</table>\n");
+                html.append("        </tr>\n");
             }
+            html.append("    </table>\n");
+        }
 
-            bw.write("</body>\n</html>");
+        html.append("</body>\n</html>\n");
 
+        try (PrintWriter pw = new PrintWriter(new FileWriter(nombreArchivo))) {
+            pw.print(html.toString());
         } catch (IOException e) {
-           
+            System.err.println("Error: " + e.getMessage());
         }
     }
 }
