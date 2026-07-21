@@ -72,7 +72,7 @@ public class ProcesadorAgenda {
         ArrayList<Peticion> resto = new ArrayList<Peticion>();
 
         for(Peticion p: lista){
-            if(p.getActividad().equals("Tancat")){
+            if(p.getActividad().equalsIgnoreCase("Tancat") || p.getActividad().equalsIgnoreCase("Cerrado")){
                 tancats.add(p);
             }else{
                 resto.add(p);
